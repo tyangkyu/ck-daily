@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
@@ -13,10 +14,10 @@ def _env(key: str) -> Optional[str]:
 
 
 def upload_slack(context: RunContext) -> SlackSendResult:
-    """Upload hero image, send the Slack message, then attach report.pdf.
+    """Post Slack message and upload files.
 
-    In dry-run mode, writes a mock result without touching the Slack API.
-    In live mode, requires SLACK_BOT_TOKEN and SLACK_CHANNEL_ID env vars.
+    In dry-run mode or when SLACK_BOT_TOKEN is absent, returns a mock result.
+    File uploads are best-effort — a failure does not abort the message post.
     """
     channel_id = _env("SLACK_CHANNEL_ID") or "C_PLACEHOLDER"
     run_date = context.run_date
@@ -31,7 +32,6 @@ def upload_slack(context: RunContext) -> SlackSendResult:
         )
 
     from slack_sdk import WebClient
-    from slack_sdk.errors import SlackApiError
 
     client = WebClient(token=_env("SLACK_BOT_TOKEN"))
     subject = f"[AX Commerce Intelligence] {run_date.strftime('%Y.%m.%d')} Daily Brief"
@@ -40,34 +40,47 @@ def upload_slack(context: RunContext) -> SlackSendResult:
     pdf_ts: Optional[str] = None
     message_ts: Optional[str] = None
 
-    # 1. Upload hero image
-    hero_path: Path = context.output_paths["hero_image"]
-    if hero_path.exists():
-        resp = client.files_upload_v2(
-            channel=channel_id,
-            file=str(hero_path),
-            filename=hero_path.name,
-            title=f"Hero Visual — {subject}",
-        )
-        hero_image_ts = resp.get("file", {}).get("shares", {}).get(channel_id, [{}])[0].get("ts")
+    # 0. Ensure bot is in the channel (works for public channels)
+    try:
+        client.conversations_join(channel=channel_id)
+    except Exception:
+        pass  # Private channel — must be manually invited
 
-    # 2. Post the text message
+    # 1. Post the text message first
     slack_message_path: Path = context.output_paths["slack_message"]
     text = slack_message_path.read_text(encoding="utf-8") if slack_message_path.exists() else subject
     resp = client.chat_postMessage(channel=channel_id, text=text, mrkdwn=True)
     message_ts = resp["ts"]
 
-    # 3. Upload report.pdf as thread reply
+    # 2. Upload hero image as reply (best-effort)
+    hero_path: Path = context.output_paths["hero_image"]
+    if hero_path.exists():
+        try:
+            resp = client.files_upload_v2(
+                channel=channel_id,
+                file=str(hero_path),
+                filename=hero_path.name,
+                title=f"Hero Visual — {subject}",
+                thread_ts=message_ts,
+            )
+            hero_image_ts = resp.get("file", {}).get("id")
+        except Exception as exc:
+            print(f"[WARN] Hero image upload skipped: {exc}", file=sys.stderr)
+
+    # 3. Upload report.pdf as reply (best-effort)
     pdf_path: Path = context.output_paths["report_pdf"]
-    if pdf_path.exists() and message_ts:
-        resp = client.files_upload_v2(
-            channel=channel_id,
-            file=str(pdf_path),
-            filename=pdf_path.name,
-            title=f"Report PDF — {subject}",
-            thread_ts=message_ts,
-        )
-        pdf_ts = resp.get("file", {}).get("shares", {}).get(channel_id, [{}])[0].get("ts")
+    if pdf_path.exists():
+        try:
+            resp = client.files_upload_v2(
+                channel=channel_id,
+                file=str(pdf_path),
+                filename=pdf_path.name,
+                title=f"Report PDF — {subject}",
+                thread_ts=message_ts,
+            )
+            pdf_ts = resp.get("file", {}).get("id")
+        except Exception as exc:
+            print(f"[WARN] PDF upload skipped: {exc}", file=sys.stderr)
 
     return SlackSendResult(
         run_date=run_date,
