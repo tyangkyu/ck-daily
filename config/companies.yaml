@@ -1,0 +1,50 @@
+tiers:
+  global_ai_leaders:
+    - OpenAI
+    - Anthropic
+    - Google DeepMind
+    - Microsoft
+    - NVIDIA
+    - Meta
+    - Amazon
+    - Apple
+    - Palantir
+    - Salesforce
+    - Oracle
+    - SAP
+  global_commerce_leaders:
+    - Amazon
+    - Walmart
+    - Costco
+    - Shopify
+    - Mercado Libre
+    - Alibaba
+    - JD.com
+    - Temu
+    - PDD Holdings
+    - TikTok Shop
+    - eBay
+  korean_commerce_platform:
+    - LG전자
+    - LG CNS
+    - 네이버
+    - 쿠팡
+    - 카카오
+    - 무신사
+    - 컬리
+    - 11번가
+    - SSG
+    - 롯데온
+    - 배달의민족
+keywords:
+  - AX
+  - Agentic AI
+  - Commerce AI
+  - Personalization
+  - Recommendation
+  - Search
+  - Retail Media
+  - Fulfillment
+  - Membership
+  - AI Shopping Assistant
+

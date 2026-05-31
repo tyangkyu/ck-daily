@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0">
+  <channel>
+    <title>Commerce AI Sample</title>
+    <link>https://example.com/commerce-ai</link>
+    <description>Local fixture for Phase 3 commerce collector tests.</description>
+    <item>
+      <title>Retail platform launches AI shopping assistant pilot</title>
+      <link>https://example.com/commerce-ai/shopping-assistant-pilot</link>
+      <pubDate>Sun, 31 May 2026 04:30:00 +0900</pubDate>
+      <description>A global retail platform is testing an AI shopping assistant for personalized discovery.</description>
+    </item>
+  </channel>
+</rss>

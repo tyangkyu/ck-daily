@@ -1,0 +1,2 @@
+"""Executive insight generation utilities."""
+

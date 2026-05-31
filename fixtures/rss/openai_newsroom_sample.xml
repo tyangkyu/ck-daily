@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0">
+  <channel>
+    <title>OpenAI Newsroom Sample</title>
+    <link>https://openai.com/news/</link>
+    <description>Local fixture for Phase 3 collector tests.</description>
+    <item>
+      <title>OpenAI expands enterprise agent controls</title>
+      <link>https://openai.com/news/enterprise-agent-controls</link>
+      <pubDate>Sun, 31 May 2026 05:00:00 +0900</pubDate>
+      <description>OpenAI announced new enterprise agent controls for safer AI transformation workflows.</description>
+    </item>
+    <item>
+      <title>OpenAI expands enterprise agent controls</title>
+      <link>https://openai.com/news/enterprise-agent-controls?utm_source=newsletter</link>
+      <pubDate>Sun, 31 May 2026 05:01:00 +0900</pubDate>
+      <description>Duplicate fixture with tracking parameters for dedupe tests.</description>
+    </item>
+    <item>
+      <title>OpenAI introduces multimodal workflow updates</title>
+      <link>https://openai.com/news/multimodal-workflow-updates</link>
+      <pubDate>Sat, 30 May 2026 18:00:00 +0900</pubDate>
+      <description>New multimodal workflow capabilities help enterprise teams connect text, image, and operational data.</description>
+    </item>
+  </channel>
+</rss>

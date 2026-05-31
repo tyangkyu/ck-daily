@@ -1,0 +1,21 @@
+groups:
+  executive_group:
+    name: Executive Group
+    email: executive@example.com
+  commerce_leadership:
+    name: Commerce Leadership
+    email: commerce@example.com
+  strategy_team:
+    name: Strategy Team
+    email: strategy@example.com
+  ax_task_force:
+    name: AX Task Force
+    email: ax-taskforce@example.com
+  innovation_team:
+    name: Innovation Team
+    email: innovation@example.com
+send_policy:
+  default_mode: draft
+  require_approval: true
+  max_recipients: 5
+  subject_prefix: "[ck-daily]"

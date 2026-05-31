@@ -1,0 +1,22 @@
+score_range:
+  min: 1
+  max: 5
+dimensions:
+  - strategic_impact
+  - market_disruption
+  - revenue_impact
+  - competitive_threat
+  - ax_relevance
+  - executive_urgency
+priority_thresholds:
+  critical_signal:
+    min_total: 25
+  high_priority:
+    min_total: 20
+    max_total: 24
+  monitor:
+    min_total: 15
+    max_total: 19
+  low_priority:
+    max_total: 14
+

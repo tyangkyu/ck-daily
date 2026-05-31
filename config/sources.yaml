@@ -1,0 +1,122 @@
+tiers:
+  A:
+    description: Official and highest credibility sources.
+    source_types:
+      - corporate_newsroom
+      - investor_relations
+      - product_release_note
+  B:
+    description: Credible industry and financial media.
+    source_names:
+      - TechCrunch
+      - Reuters
+      - Bloomberg
+      - MIT Technology Review
+  C:
+    description: Weak signal and social/community sources.
+    source_names:
+      - LinkedIn
+      - X
+      - Reddit
+      - Hacker News
+
+policy:
+  tier_c_can_be_critical_alone: false
+  default_collection_window_hours: 72
+  expanded_collection_window_hours: 96
+
+rss_feeds:
+  # Tier A — Official Newsrooms
+  - name: OpenAI Newsroom
+    url: https://openai.com/news/rss.xml
+    tier: A
+    companies: [OpenAI]
+    scope: [AX, Agentic AI, Enterprise Adoption]
+
+  - name: Anthropic News
+    url: https://www.anthropic.com/rss.xml
+    tier: A
+    companies: [Anthropic]
+    scope: [AX, Safety, Enterprise AI]
+
+  - name: Google AI Blog
+    url: https://blog.google/technology/ai/rss/
+    tier: A
+    companies: [Google]
+    scope: [AX, Multimodal, Search AI]
+
+  - name: Microsoft AI Blog
+    url: https://blogs.microsoft.com/ai/feed/
+    tier: A
+    companies: [Microsoft]
+    scope: [AX, Copilot, Enterprise AI]
+
+  - name: NVIDIA Blog
+    url: https://blogs.nvidia.com/feed/
+    tier: A
+    companies: [NVIDIA]
+    scope: [AX, Inference, AI Infrastructure]
+
+  - name: Meta AI Blog
+    url: https://ai.meta.com/blog/rss/
+    tier: A
+    companies: [Meta]
+    scope: [AX, Open Source AI, Commerce AI]
+
+  - name: AWS News
+    url: https://aws.amazon.com/blogs/aws/feed/
+    tier: A
+    companies: [Amazon]
+    scope: [AX, Cloud AI, Commerce AI]
+
+  - name: Shopify Engineering Blog
+    url: https://www.shopify.com/partners/blog.atom
+    tier: A
+    companies: [Shopify]
+    scope: [Commerce AI, Merchant Tools, Checkout]
+
+  # Tier B — Industry Media
+  - name: TechCrunch AI
+    url: https://techcrunch.com/category/artificial-intelligence/feed/
+    tier: B
+    companies: []
+    scope: [AX, AI Funding, Enterprise AI]
+
+  - name: TechCrunch Commerce
+    url: https://techcrunch.com/category/e-commerce/feed/
+    tier: B
+    companies: []
+    scope: [Commerce AI, E-commerce, Retail Tech]
+
+  - name: Reuters Technology
+    url: https://feeds.reuters.com/reuters/technologyNews
+    tier: B
+    companies: []
+    scope: [AX, Commerce AI, Market]
+
+  - name: MIT Technology Review AI
+    url: https://www.technologyreview.com/feed/
+    tier: B
+    companies: []
+    scope: [AX, Research, AI Policy]
+
+  - name: The Verge AI
+    url: https://www.theverge.com/ai-artificial-intelligence/rss/index.xml
+    tier: B
+    companies: []
+    scope: [AX, Consumer AI, Product Launches]
+
+  # Fixture feeds — used in tests / offline mode
+  - name: OpenAI Newsroom Sample
+    url: fixtures/rss/openai_newsroom_sample.xml
+    tier: A
+    companies: [OpenAI]
+    scope: [AX, Agentic AI, Enterprise Adoption]
+    offline_only: true
+
+  - name: Commerce AI Sample
+    url: fixtures/rss/commerce_ai_sample.xml
+    tier: B
+    companies: [Amazon, Shopify]
+    scope: [Commerce AI, Personalization, AI Shopping Assistant]
+    offline_only: true

@@ -1,0 +1,5 @@
+timezone: Asia/Seoul
+daily_send_time: "07:00"
+default_mode: draft
+dry_run_default: true
+

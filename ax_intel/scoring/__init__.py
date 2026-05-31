@@ -1,0 +1,2 @@
+"""Strategic signal scoring utilities."""
+
