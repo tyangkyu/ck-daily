@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import textwrap
 import zipfile
 from pathlib import Path
 from xml.sax.saxutils import escape as xml_escape
@@ -61,16 +62,74 @@ def _pdf_escape(text: str) -> str:
 
 
 def write_pdf(path: Path, markdown: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        _write_reportlab_pdf(path, markdown)
+    except ImportError:
+        _write_ascii_fallback_pdf(path, markdown)
+
+
+def _candidate_korean_fonts() -> list[Path]:
+    return [
+        Path("/System/Library/Fonts/Supplemental/AppleGothic.ttf"),
+        Path("/System/Library/Fonts/AppleSDGothicNeo.ttc"),
+        Path("/Library/Fonts/NanumGothic.ttf"),
+        Path("/System/Library/Fonts/Supplemental/Arial Unicode.ttf"),
+    ]
+
+
+def _write_reportlab_pdf(path: Path, markdown: str) -> None:
+    from reportlab.lib.pagesizes import A4
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    from reportlab.pdfgen import canvas
+
+    font_name = "Helvetica"
+    for font_path in _candidate_korean_fonts():
+        if font_path.exists():
+            try:
+                pdfmetrics.registerFont(TTFont("CKDailyKorean", str(font_path)))
+                font_name = "CKDailyKorean"
+                break
+            except Exception:
+                continue
+
+    page_width, page_height = A4
+    margin_x = 42
+    margin_y = 46
+    line_height = 15
+    wrapped_lines: list[str] = []
+    for line in _plain_lines(markdown):
+        wrapped_lines.extend(textwrap.wrap(line, width=82) or [""])
+
+    pdf = canvas.Canvas(str(path), pagesize=A4, pdfVersion=(1, 4))
+    pdf.setTitle("ck-daily Daily Executive Brief")
+    y = page_height - margin_y
+    for index, line in enumerate(wrapped_lines):
+        if y < margin_y:
+            pdf.showPage()
+            y = page_height - margin_y
+        if index == 0:
+            pdf.setFont(font_name, 15)
+        else:
+            pdf.setFont(font_name, 10)
+        pdf.drawString(margin_x, y, line[:120])
+        y -= line_height
+    pdf.save()
+
+
+def _write_ascii_fallback_pdf(path: Path, markdown: str) -> None:
     lines = _plain_lines(markdown)[:42]
     text_ops = ["BT", "/F1 11 Tf", "50 790 Td", "14 TL"]
     for index, line in enumerate(lines):
-        escaped = _pdf_escape(line[:110])
+        safe_line = line.encode("ascii", "replace").decode("ascii")
+        escaped = _pdf_escape(safe_line[:110])
         if index == 0:
             text_ops.append(f"({escaped}) Tj")
         else:
             text_ops.append(f"T* ({escaped}) Tj")
     text_ops.append("ET")
-    stream = "\n".join(text_ops).encode("utf-8")
+    stream = "\n".join(text_ops).encode("ascii", "replace")
 
     objects = [
         b"<< /Type /Catalog /Pages 2 0 R >>",
@@ -96,5 +155,4 @@ def write_pdf(path: Path, markdown: str) -> None:
         + str(xref_offset).encode("ascii")
         + b"\n%%EOF\n"
     )
-    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(b"".join(chunks + xref + [trailer]))

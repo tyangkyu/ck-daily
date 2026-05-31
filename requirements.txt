@@ -3,3 +3,4 @@ email-validator>=2.1,<3
 PyYAML>=6.0,<7
 pytest>=8.0,<9
 slack-sdk>=3.27,<4
+reportlab>=4.0,<5
