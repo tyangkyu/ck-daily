@@ -74,8 +74,9 @@ def test_validate_outputs_passes_for_complete_pipeline(tmp_path: Path) -> None:
 
     assert lines[1] == "passed"
     assert validation.passed is True
-    assert len(validation.checks) == 7
+    assert len(validation.checks) == 8
     assert all(check.passed for check in validation.checks)
+    assert any(check.name == "slack_message_density" for check in validation.checks)
 
 
 def test_validate_outputs_records_failure_without_nonzero_exit(tmp_path: Path) -> None:

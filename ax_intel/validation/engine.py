@@ -103,6 +103,17 @@ def validate_slack_result(context: RunContext) -> str:
     return f"Slack distribution status: {result.status}"
 
 
+def validate_slack_message_density(context: RunContext) -> str:
+    message = context.output_paths["slack_message"].read_text(encoding="utf-8")
+    required = ["Executive Summary", "Impact", "Top 전략 신호", "핵심 권고", "상세"]
+    missing = [item for item in required if item not in message]
+    if missing:
+        raise ValueError(f"Slack message missing: {', '.join(missing)}")
+    if len(message) > 1800:
+        raise ValueError(f"Slack message too long: {len(message)} characters")
+    return f"Slack message density OK: {len(message)} characters"
+
+
 def validate_report_exports(context: RunContext) -> str:
     pdf_path = context.output_paths["report_pdf"]
     docx_path = context.output_paths["report_docx"]
@@ -120,6 +131,7 @@ def run_validation(context: RunContext) -> ValidationResult:
         _check("top_signals", lambda: validate_top_signals(context)),
         _check("source_urls", lambda: validate_source_urls(context)),
         _check("email_html", lambda: validate_email_html(context)),
+        _check("slack_message_density", lambda: validate_slack_message_density(context)),
         _check("slack_result", lambda: validate_slack_result(context)),
         _check("report_exports", lambda: validate_report_exports(context)),
     ]

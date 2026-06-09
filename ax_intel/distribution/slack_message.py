@@ -17,8 +17,17 @@ def _hero_insight(insights: List[Insight], hero_story: HeroStory) -> Insight:
     return next((insight for insight in insights if insight.signal_id == hero_story.signal_id), insights[0])
 
 
-def _clip(text: str, limit: int = 360) -> str:
+def _clip(text: str, limit: int = 220) -> str:
     return text if len(text) <= limit else text[: limit - 1].rstrip() + "..."
+
+
+def _priority_label(priority: str) -> str:
+    normalized = priority.lower()
+    if "high" in normalized:
+        return "High"
+    if "monitor" in normalized or "medium" in normalized:
+        return "Medium"
+    return "Low"
 
 
 def render_slack_message(
@@ -37,34 +46,22 @@ def render_slack_message(
     hero_item = items_by_id[hero_story.signal_id]
     insight = _hero_insight(insights, hero_story)
     top_signals = "\n".join(
-        (
-            f"{index}. *{signal.title}* - {signal.priority}, {signal.total_score}/30점\n"
-            f"   - {items_by_id[signal.item_id].summary_raw}"
-        )
-        for index, signal in enumerate(signals[:5], start=1)
+        f"{index}. [{_priority_label(signal.priority)}] *{signal.title}* ({signal.total_score}/30)"
+        for index, signal in enumerate(signals[:3], start=1)
     )
-    immediate_actions = "\n".join(f"- {action}" for action in insight.recommended_actions.immediate[:3])
+    immediate_actions = "\n".join(f"- {action}" for action in insight.recommended_actions.immediate[:2])
     canvas_line = f"- Slack Canvas: {canvas_url}\n" if canvas_url else ""
 
-    return f"""*ck-daily | {context.run_date.isoformat()} 데일리 브리프*
+    return f"""*ck-daily | {context.run_date.isoformat()} Executive Dashboard*
 
-*히어로 신호*
-{hero_story.title}
+*Executive Summary*
+- 핵심 신호: *{hero_story.title}* ({_priority_label(hero_signal.priority)}, {hero_signal.total_score}/30)
 - 출처: {hero_item.source_name} / Tier {hero_item.source_tier}
-- 원문: {hero_item.url}
-- 우선순위: {hero_signal.priority}, {hero_signal.total_score}/30점
+- 한줄 판단: {_clip(insight.why_it_matters, 180)}
 
-*무슨 뉴스인가*
-{_clip(insight.what_happened)}
-
-*왜 중요한가*
-{_clip(insight.why_it_matters)}
-
-*한국 시장 영향*
-{_clip(insight.implication_for_korea)}
-
-*LG / Enterprise Commerce 시사점*
-{_clip(insight.implication_for_lg)}
+*Impact*
+- Korea: {_clip(insight.implication_for_korea, 160)}
+- LG/Enterprise: {_clip(insight.implication_for_lg, 180)}
 
 *Top 전략 신호*
 {top_signals}
@@ -72,10 +69,7 @@ def render_slack_message(
 *핵심 권고*
 {immediate_actions}
 
-*산출물*
+*상세*
 {canvas_line}- PDF: {manifest.pdf_path.name if manifest.pdf_path else "report.pdf"}
-- Markdown: {manifest.markdown_path.name if manifest.markdown_path else "report.md"}
-- HTML Email: {manifest.html_email_path.name if manifest.html_email_path else "email.html"}
-
-_현재 PoC는 Slack 커넥터 제약으로 로컬 파일을 직접 첨부하지 않고, 본문/스레드/Canvas 링크로 전달한다._
+- 원문: {hero_item.url}
 """
