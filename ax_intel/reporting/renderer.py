@@ -32,6 +32,17 @@ def _actions_md(insight: Insight) -> str:
     )
 
 
+def _unique_lines(lines: Iterable[str]) -> List[str]:
+    seen = set()
+    unique = []
+    for line in lines:
+        if line in seen:
+            continue
+        seen.add(line)
+        unique.append(line)
+    return unique
+
+
 def render_report_markdown(
     *, context: RunContext, signals: List[Signal], insights: List[Insight], hero_story: HeroStory
 ) -> str:
@@ -40,61 +51,64 @@ def render_report_markdown(
     insight_sections = "\n\n".join(
         [
             (
-                f"### {index}. {insight.what_happened}\n\n"
-                f"**왜 중요한가**: {insight.why_it_matters}\n\n"
-                f"**한국 시장 시사점**: {insight.implication_for_korea}\n\n"
-                f"**LG / 엔터프라이즈 커머스 시사점**: {insight.implication_for_lg}\n\n"
-                f"**권고 액션**\n{_actions_md(insight)}"
+                f"### {index}. {_signal_lookup(signals)[insight.signal_id].title}\n\n"
+                f"{insight.why_it_matters}\n\n"
+                f"**근거**: {insight.what_happened}"
             )
             for index, insight in enumerate(insights[:5], start=1)
         ]
     )
+    domestic_sections = "\n\n".join(
+        [
+            (
+                f"### {index}. {_signal_lookup(signals)[insight.signal_id].title}\n\n"
+                f"{insight.implication_for_korea}\n\n"
+                f"**실행 검토**\n{_actions_md(insight)}"
+            )
+            for index, insight in enumerate(insights[:3], start=1)
+        ]
+    )
+    outlook_lines = "\n".join(f"- {line}" for line in _unique_lines(insight.implication_for_lg for insight in insights[:5]))
 
     return f"""# ck-daily 데일리 브리프
 
 > 날짜: {context.run_date.isoformat()}
-> Mode: {context.mode}
-
-## 1페이지: 히어로 스토리
+> 실행 모드: {context.mode}
 
 ![히어로 비주얼](hero-image.png)
 
-**{hero_story.title}**
+## 1. 핵심 요약
 
-{hero_story.selection_reason}
+- 오늘의 핵심 신호는 **{hero_story.title}**이다.
+- {hero_story.selection_reason}
+- {hero_insight.why_it_matters}
+- {hero_insight.implication_for_korea}
 
-{hero_story.visual_message}
+## 2. 주목해야 할 변화
 
-## 요약
+{hero_insight.what_happened}
 
-- 히어로 신호: {hero_story.title}
-- 우선순위: {_signal_lookup(signals)[hero_story.signal_id].priority}
-- Top 신호 수: {len(signals[:5])}
-- 핵심 시사점: {hero_insight.implication_for_lg}
-
-## 2페이지: Top 전략 신호
+### Top 전략 신호
 
 {signal_lines}
 
-## 3페이지: 커머스 인텔리전스
+## 3. IT 산업 관점 핵심 인사이트
 
 {insight_sections}
 
-## 4페이지: AX 전환 인사이트
+## 4. 국내 기업이 고려해야 할 시사점
 
-- 리소스 투입 전에 AX 연관성과 경영진 긴급도를 함께 검토한다.
-- 우선순위가 높은 신호는 측정 가능한 PoC 가설로 전환한다.
-- 약한 커머스 신호는 Tier A 공식 출처의 보강 여부를 계속 추적한다.
+{domestic_sections}
 
-## 5페이지: 실행 과제
+## 5. 향후 전망
 
-{_actions_md(hero_insight)}
+{outlook_lines}
 
-## 경영진 질문
+## 검토 질문
 
-- 어떤 신호에 즉시 경영진 스폰서십이 필요한가?
-- 어떤 커머스 업무 흐름이 AI 에이전트 PoC에 가장 적합한가?
-- 90일 내 확산 판단을 위해 어떤 근거가 필요한가?
+- 이 신호가 기존 기술 로드맵의 어떤 가정을 바꾸는가?
+- 1~3년 내 사업 지표나 운영 지표로 검증 가능한 적용 영역은 무엇인가?
+- 과장된 홍보 문구를 제외했을 때 실제 투자 우선순위로 남는 항목은 무엇인가?
 """
 
 
@@ -115,11 +129,15 @@ def render_email_html(
     <img src="hero-image.png" alt="Hero visual" style="width: 100%; max-width: 720px; border-radius: 8px;" />
     <h2>{escape(hero_story.title)}</h2>
     <p>{escape(hero_story.selection_reason)}</p>
-    <h3>요약</h3>
+    <h3>핵심 요약</h3>
     <p>{escape(hero_insight.why_it_matters)}</p>
+    <h3>주목해야 할 변화</h3>
+    <p>{escape(hero_insight.what_happened)}</p>
     <h3>Top 전략 신호</h3>
     <ol>{top_items}</ol>
-    <h3>핵심 권고</h3>
+    <h3>국내 기업이 고려해야 할 시사점</h3>
+    <p>{escape(hero_insight.implication_for_korea)}</p>
+    <h3>실행 검토</h3>
     <ul>{actions}</ul>
     <p style="color: #6b7280;">PDF 첨부는 현재 report.pdf 산출물로 생성된다.</p>
   </body>
@@ -136,7 +154,7 @@ def render_archive_markdown(
         insights=insights,
         hero_story=hero_story,
     )
-    return report + "\n\n---\n\n아카이브 상태: Phase 8 skeleton에서 생성됨.\n"
+    return report + "\n\n---\n\n아카이브 상태: 생성 완료.\n"
 
 
 def build_manifest(context: RunContext) -> ReportManifest:

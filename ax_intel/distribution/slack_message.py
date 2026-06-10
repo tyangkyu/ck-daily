@@ -52,21 +52,23 @@ def render_slack_message(
     immediate_actions = "\n".join(f"- {action}" for action in insight.recommended_actions.immediate[:2])
     canvas_line = f"- Slack Canvas: {canvas_url}\n" if canvas_url else ""
 
-    return f"""*ck-daily | {context.run_date.isoformat()} Executive Dashboard*
+    return f"""*ck-daily | {context.run_date.isoformat()} 데일리 브리프*
 
-*Executive Summary*
+*핵심 요약*
 - 핵심 신호: *{hero_story.title}* ({_priority_label(hero_signal.priority)}, {hero_signal.total_score}/30)
 - 출처: {hero_item.source_name} / Tier {hero_item.source_tier}
-- 한줄 판단: {_clip(insight.why_it_matters, 180)}
+- 판단: {_clip(insight.why_it_matters, 180)}
 
-*Impact*
-- Korea: {_clip(insight.implication_for_korea, 160)}
-- LG/Enterprise: {_clip(insight.implication_for_lg, 180)}
+*주목해야 할 변화*
+- {_clip(insight.what_happened, 220)}
+
+*국내 기업 시사점*
+- {_clip(insight.implication_for_korea, 220)}
 
 *Top 전략 신호*
 {top_signals}
 
-*핵심 권고*
+*실행 검토*
 {immediate_actions}
 
 *상세*

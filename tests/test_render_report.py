@@ -81,18 +81,21 @@ def test_render_report_creates_markdown_html_archive_and_manifest(tmp_path: Path
     archive = archive_path.read_text(encoding="utf-8")
     manifest = ReportManifest.model_validate(read_json(manifest_path))
 
-    assert "1페이지: 히어로 스토리" in report
-    assert "2페이지: Top 전략 신호" in report
-    assert "5페이지: 실행 과제" in report
+    assert "1. 핵심 요약" in report
+    assert "2. 주목해야 할 변화" in report
+    assert "3. IT 산업 관점 핵심 인사이트" in report
+    assert "4. 국내 기업이 고려해야 할 시사점" in report
+    assert "5. 향후 전망" in report
     assert "OpenAI expands enterprise agent controls" in report
     assert "<h3>Top 전략 신호</h3>" in email
-    assert "핵심 권고" in email
-    assert "아카이브 상태: Phase 8 skeleton에서 생성됨." in archive
+    assert "국내 기업이 고려해야 할 시사점" in email
+    assert "아카이브 상태: 생성 완료." in archive
     assert zipfile.is_zipfile(docx_path)
     with zipfile.ZipFile(docx_path) as archive_file:
         assert "word/document.xml" in archive_file.namelist()
         document_xml = archive_file.read("word/document.xml").decode("utf-8")
         assert "ck-daily 데일리 브리프" in document_xml
+        assert "핵심 요약" in document_xml
     assert pdf_path.read_bytes().startswith(b"%PDF-1.4")
     assert manifest.markdown_path == report_path
     assert manifest.docx_path == docx_path

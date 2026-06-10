@@ -67,11 +67,12 @@ def test_render_slack_message_creates_post_ready_markdown(tmp_path: Path) -> Non
     message = slack_path.read_text(encoding="utf-8")
 
     assert slack_path == tmp_path / "2026-05-31" / "slack-message.md"
-    assert "*ck-daily | 2026-05-31 Executive Dashboard*" in message
-    assert "*Executive Summary*" in message
-    assert "*Impact*" in message
+    assert "*ck-daily | 2026-05-31 데일리 브리프*" in message
+    assert "*핵심 요약*" in message
+    assert "*주목해야 할 변화*" in message
+    assert "*국내 기업 시사점*" in message
     assert "*Top 전략 신호*" in message
-    assert "*핵심 권고*" in message
+    assert "*실행 검토*" in message
     assert "*상세*" in message
     assert "OpenAI expands enterprise agent controls" in message
     assert "report.pdf" in message

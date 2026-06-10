@@ -11,73 +11,191 @@ def _item_lookup(clean_items: Iterable[CleanItem]) -> Dict[str, CleanItem]:
 
 def _scope_text(item: CleanItem) -> str:
     scope = item.related_scope or item.scope
-    return ", ".join(scope) if scope else "AX/Commerce"
+    return ", ".join(scope) if scope else "디지털 전환"
 
 
-def _company_phrase(item: CleanItem) -> str:
-    if not item.companies:
-        return "모니터링 대상 시장"
-    return ", ".join(item.companies)
+def _title_or_source_contains(item: CleanItem, *keywords: str) -> bool:
+    text = f"{item.title} {item.summary_raw} {item.source_name} {' '.join(item.scope)} {' '.join(item.related_scope)}"
+    folded = text.casefold()
+    return any(keyword.casefold() in folded for keyword in keywords)
 
 
-def _summary_sentence(item: CleanItem) -> str:
-    summary = item.summary_raw.strip()
-    if not summary:
-        return "세부 요약은 아직 수집되지 않았으며, 후속 크롤링에서 보강이 필요하다."
-    return summary
+def _primary_theme(item: CleanItem) -> str:
+    if _title_or_source_contains(item, "multimodal", "image", "document"):
+        return "멀티모달 업무 재설계"
+    if _title_or_source_contains(item, "agent", "agentic", "workflow", "codex"):
+        return "업무 실행형 에이전트"
+    if _title_or_source_contains(item, "bedrock", "cloud", "aws", "inference"):
+        return "클라우드 기반 AI 플랫폼"
+    if _title_or_source_contains(item, "data", "foundation model", "transaction"):
+        return "데이터 기반 산업 특화 모델"
+    if _title_or_source_contains(item, "security", "cognito", "safeguard", "governance"):
+        return "보안과 거버넌스"
+    if _title_or_source_contains(item, "commerce", "shopping", "retail", "customer"):
+        return "디지털 커머스"
+    if _title_or_source_contains(item, "software", "developer", "engineering"):
+        return "소프트웨어 엔지니어링"
+    return "AI 플랫폼 전략"
 
 
-def _strategic_angle(item: CleanItem) -> str:
-    scope = set(item.related_scope or item.scope)
-    if "Agentic AI" in scope:
-        return "AI 에이전트를 실제 업무 흐름에 투입할 때 필요한 통제, 권한, 감사 체계가 경쟁 포인트로 이동하고 있음을 보여준다."
-    if "Multimodal AI" in scope:
-        return "텍스트 중심 자동화를 넘어 이미지, 문서, 운영 데이터를 함께 해석하는 업무 재설계 압력이 커지고 있음을 의미한다."
-    if "AI Shopping Assistant" in scope:
-        return "검색과 추천이 대화형 구매 지원으로 확장되며 커머스 접점의 전환율 경쟁이 다시 열릴 가능성이 있다."
-    if "Commerce AI" in scope:
-        return "커머스 운영의 차별화 축이 가격·상품 구색에서 AI 기반 개인화와 운영 자동화로 이동하고 있음을 시사한다."
-    return "AI 전환이 개별 기능 개선을 넘어 경영진이 추적해야 할 플랫폼 전략 이슈로 올라오고 있음을 시사한다."
+def _evidence_phrase(item: CleanItem) -> str:
+    theme = _primary_theme(item)
+    if theme == "업무 실행형 에이전트":
+        return "원문은 에이전트 도입에서 통제, 권한, 안전한 업무 적용 방식이 중요해지고 있음을 다룬다."
+    if theme == "멀티모달 업무 재설계":
+        return "원문은 텍스트뿐 아니라 이미지, 문서, 운영 데이터를 함께 다루는 업무 흐름의 변화를 다룬다."
+    if theme == "클라우드 기반 AI 플랫폼":
+        return "원문은 AI 모델을 기업의 기존 클라우드 운영 환경 안에서 더 쉽게 배포하고 관리하는 흐름을 다룬다."
+    if theme == "데이터 기반 산업 특화 모델":
+        return "원문은 산업 데이터의 구조를 반영한 모델과 분석 기반이 경쟁 자산이 되는 흐름을 다룬다."
+    if theme == "보안과 거버넌스":
+        return "원문은 AI와 디지털 서비스 확산에 필요한 보안, 복원성, 통제 체계의 강화를 다룬다."
+    if theme == "디지털 커머스":
+        return "원문은 검색, 추천, 상담, 구매 여정에서 AI가 고객 접점과 운영 방식을 바꾸는 흐름을 다룬다."
+    if theme == "소프트웨어 엔지니어링":
+        return "원문은 개발 방식과 소프트웨어 전달 체계가 AI를 중심으로 재편되는 흐름을 다룬다."
+    return "원문은 AI가 단일 기능이 아니라 플랫폼과 조직 운영 전반의 전략 변수로 이동하는 흐름을 다룬다."
+
+
+def _change_observed(item: CleanItem) -> str:
+    theme = _primary_theme(item)
+    return (
+        f"{item.source_name}의 신호는 '{item.title}'을 통해 {theme} 경쟁이 기능 출시보다 "
+        f"운영 체계와 도입 경로 설계로 이동하고 있음을 보여준다. {_evidence_phrase(item)}"
+    )
+
+
+def _industry_insight(signal: Signal, item: CleanItem) -> str:
+    theme = _primary_theme(item)
+    if theme == "업무 실행형 에이전트":
+        angle = (
+            "AI 도입의 초점이 답변 생성에서 권한 위임, 결과 검증, 예외 처리까지 포함한 "
+            "업무 운영 모델로 옮겨가고 있다."
+        )
+    elif theme == "멀티모달 업무 재설계":
+        angle = (
+            "AI 활용은 단일 문서나 대화 처리에서 벗어나 여러 형태의 데이터를 함께 해석하는 "
+            "업무 재설계 과제로 확장되고 있다."
+        )
+    elif theme == "클라우드 기반 AI 플랫폼":
+        angle = (
+            "모델 성능 자체보다 배포 경로, 과금 방식, 보안 통제, 기존 클라우드 운영 도구와의 "
+            "결합력이 플랫폼 선택 기준으로 부상하고 있다."
+        )
+    elif theme == "데이터 기반 산업 특화 모델":
+        angle = (
+            "범용 LLM을 그대로 쓰는 단계에서 벗어나 거래, 고객, 운영 데이터의 구조를 반영한 "
+            "산업별 모델과 데이터 상품화가 경쟁 축이 되고 있다."
+        )
+    elif theme == "보안과 거버넌스":
+        angle = (
+            "AI 활용 범위가 넓어질수록 인증, 접근 제어, 감사 추적, 지역별 복원성 같은 "
+            "기반 통제가 서비스 품질의 일부로 평가된다."
+        )
+    elif theme == "디지털 커머스":
+        angle = (
+            "커머스 경쟁은 화면 단위 개인화에서 재고, 가격, 상담, 검색을 함께 조율하는 "
+            "운영 플랫폼 경쟁으로 확장되고 있다."
+        )
+    elif theme == "소프트웨어 엔지니어링":
+        angle = (
+            "개발 생산성 향상은 코드 작성 자동화만으로는 부족하며, 요구사항 관리, 테스트, 배포, "
+            "운영 피드백을 연결하는 방식으로 재설계되고 있다."
+        )
+    else:
+        angle = (
+            "AI는 개별 기능 개선 항목이 아니라 데이터, 클라우드, 보안, 조직 운영을 함께 바꾸는 "
+            "플랫폼 전략 이슈로 다뤄져야 한다."
+        )
+    return f"{signal.total_score}/30점의 {signal.priority} 신호다. {angle}"
+
+
+def _domestic_implication(item: CleanItem) -> str:
+    theme = _primary_theme(item)
+    if theme == "업무 실행형 에이전트":
+        return (
+            "국내 기업은 에이전트 PoC를 챗봇 확장으로 설계하기보다, 승인 권한, 로그, 장애 시 "
+            "사람 개입 기준을 먼저 정해야 한다. 업무 자동화율보다 재작업 감소와 처리 리드타임을 "
+            "우선 지표로 삼는 편이 현실적이다."
+        )
+    if theme == "멀티모달 업무 재설계":
+        return (
+            "국내 기업은 멀티모달 AI를 단순 문서 요약 도구로 보기보다, 이미지 검사, 상담 이력, "
+            "상품 정보, 현장 문서를 함께 연결하는 업무 단위에서 검토해야 한다. 데이터 접근 권한과 "
+            "검수 기준을 먼저 정하지 않으면 현업 확산이 어렵다."
+        )
+    if theme == "클라우드 기반 AI 플랫폼":
+        return (
+            "국내 IT 조직은 모델별 성능 비교만으로 의사결정하기 어렵다. 기존 클라우드 계약, "
+            "데이터 반출 제한, 보안 심사, 운영 모니터링 체계까지 포함해 플랫폼 전환 비용을 "
+            "함께 계산해야 한다."
+        )
+    if theme == "데이터 기반 산업 특화 모델":
+        return (
+            "국내 기업은 자체 데이터가 모델 차별화로 이어지는 영역과 외부 플랫폼을 쓰는 편이 "
+            "나은 영역을 구분해야 한다. 거래 데이터와 운영 로그의 품질 관리가 향후 1~3년 "
+            "투자 우선순위가 될 가능성이 높다."
+        )
+    if theme == "보안과 거버넌스":
+        return (
+            "국내 기업은 AI 서비스 도입 전에 개인정보, 접근 권한, 감사 로그, 지역별 장애 대응 "
+            "요건을 표준 체크리스트로 만들어야 한다. 보안 심사를 사후 절차로 두면 확산 속도가 "
+            "크게 떨어진다."
+        )
+    if theme == "디지털 커머스":
+        return (
+            "국내 커머스 기업은 추천 정확도보다 구매 전환, 상담 처리, 재고 예외 대응처럼 "
+            "손익계산서와 연결되는 운영 지표를 기준으로 AI 적용 영역을 고르는 것이 유효하다."
+        )
+    return (
+        "국내 IT 기업은 기술 도입 여부보다 어떤 업무 단위에서 비용, 속도, 품질이 동시에 "
+        "개선되는지 검증해야 한다. 1~3년 관점에서는 작은 자동화 과제를 넓게 흩뿌리기보다 "
+        "플랫폼화 가능한 공통 역량에 투자하는 편이 낫다."
+    )
+
+
+def _future_outlook(item: CleanItem) -> str:
+    theme = _primary_theme(item)
+    if theme == "업무 실행형 에이전트":
+        return "향후 1~3년 동안 에이전트는 단독 앱보다 업무 시스템 안의 실행 계층으로 흡수될 가능성이 높다."
+    if theme == "멀티모달 업무 재설계":
+        return "멀티모달 AI는 문서 처리 자동화에서 시작해 품질 관리, 고객 응대, 현장 운영 지원으로 확장될 가능성이 높다."
+    if theme == "클라우드 기반 AI 플랫폼":
+        return "AI 플랫폼 경쟁은 모델 라인업보다 운영 안정성, 규제 대응, 비용 예측 가능성 중심으로 재편될 가능성이 크다."
+    if theme == "데이터 기반 산업 특화 모델":
+        return "산업별 데이터 모델은 금융, 커머스, 제조처럼 반복 거래 데이터가 많은 영역에서 먼저 상용화될 가능성이 높다."
+    if theme == "보안과 거버넌스":
+        return "AI 확산 속도는 모델 성능보다 조직이 신뢰할 수 있는 통제 체계를 얼마나 빨리 마련하느냐에 좌우될 것이다."
+    if theme == "디지털 커머스":
+        return "커머스 AI는 고객 접점 기능보다 가격, 재고, 상담, 물류를 연결하는 운영 최적화 영역에서 실질 효과가 커질 것이다."
+    return "AI 투자는 실험성 예산에서 핵심 플랫폼 예산으로 이동하되, 성과 측정이 어려운 과제는 빠르게 정리될 가능성이 높다."
+
+
+def _actions_for(item: CleanItem) -> RecommendedActions:
+    theme = _primary_theme(item)
+    immediate = [
+        f"{theme} 관점에서 이번 신호가 기존 기술 로드맵의 어떤 가정과 충돌하는지 확인한다.",
+        "관련 원문과 경쟁사 움직임을 대조해 과장된 홍보성 표현과 실제 적용 가능한 변화를 분리한다.",
+    ]
+    thirty_days = [
+        "사업 지표나 운영 지표와 직접 연결되는 적용 후보를 1~2개로 좁힌다.",
+        "필요 데이터, 보안 제약, 운영 책임자를 함께 정의해 PoC 범위를 작게 고정한다.",
+    ]
+    ninety_days = [
+        "PoC 결과를 비용, 리드타임, 품질 지표로 평가해 확대 또는 중단을 결정한다.",
+        "반복 적용 가능성이 확인된 역량은 개별 프로젝트가 아니라 공통 플랫폼 과제로 전환한다.",
+    ]
+    return RecommendedActions(immediate=immediate, thirty_days=thirty_days, ninety_days=ninety_days)
 
 
 def build_insight(signal: Signal, item: CleanItem) -> Insight:
-    scope = _scope_text(item)
-    companies = _company_phrase(item)
-    source = f"{item.source_name} ({item.source_tier})"
-    summary = _summary_sentence(item)
-    strategic_angle = _strategic_angle(item)
-
     return Insight(
         signal_id=signal.item_id,
-        what_happened=f"{source}에서 '{signal.title}' 신호가 포착됐다. 핵심 내용은 {summary}",
-        why_it_matters=(
-            f"이 신호는 {signal.total_score}/30점으로 '{signal.priority}' 등급이며, "
-            f"{scope} 영역과 직접 연결된다. {strategic_angle}"
-        ),
-        implication_for_korea=(
-            f"국내 커머스·플랫폼 기업은 {companies}의 움직임이 고객 경험, 운영 효율, "
-            "플랫폼 경쟁력으로 전환되는 방식을 추적해야 한다. 특히 한국 시장에서는 빠른 배송, 멤버십, "
-            "검색·추천 품질이 이미 경쟁의 기본값이 되었기 때문에 AI가 실제 구매 여정의 시간을 줄이는지 확인해야 한다."
-        ),
-        implication_for_lg=(
-            "LG 및 엔터프라이즈 커머스 관점에서는 검색, 추천, 풀필먼트, "
-            "AI 에이전트 기반 운영 자동화의 적용 후보로 검토할 필요가 있다. 단순 챗봇이 아니라 "
-            "상품 탐색, 고객 응대, 재고·물류 예외 처리, 임직원 업무 지원 중 어디에서 매출 또는 비용 효과가 나는지 가설화해야 한다."
-        ),
-        recommended_actions=RecommendedActions(
-            immediate=[
-                "출처 신뢰도를 확인하고 기존 AX 커머스 과제와 비교한다.",
-                "유사한 내부 PoC 또는 파일럿이 이미 있는지 확인한다.",
-            ],
-            thirty_days=[
-                "커머스 성과와 연결되는 측정 가능한 PoC 가설을 1개 정의한다.",
-                "필요 데이터, 업무 오너, 시스템 연계 제약을 정리한다.",
-            ],
-            ninety_days=[
-                "PoC 근거를 바탕으로 확산, 제휴, 모니터링 중 하나를 결정한다.",
-                "리스크, 비용, 경쟁 영향이 포함된 경영진 보고안을 준비한다.",
-            ],
-        ),
+        what_happened=_change_observed(item),
+        why_it_matters=f"{_industry_insight(signal, item)} 관련 범위: {_scope_text(item)}.",
+        implication_for_korea=_domestic_implication(item),
+        implication_for_lg=_future_outlook(item),
+        recommended_actions=_actions_for(item),
     )
 
 
@@ -111,13 +229,13 @@ def select_hero_story(signals: List[Signal]) -> HeroStory:
         signal_id=hero.item_id,
         title=hero.title,
         selection_reason=(
-            f"총점 {hero.total_score}/30점, AX 연관성 {hero.scores.ax_relevance}/5점, "
-            f"경영진 긴급도 {hero.scores.executive_urgency}/5점으로 오늘의 핵심 스토리로 선정했다."
+            f"총점 {hero.total_score}/30점, 시장 변화 {hero.scores.market_disruption}/5점, "
+            f"전략 영향 {hero.scores.strategic_impact}/5점으로 오늘 가장 우선 검토할 신호로 선정했다."
         ),
         alternative_signal_ids=alternatives,
         visual_message=(
-            "AI 기반 커머스 운영이 단순 리포팅에서 에이전트 기반 실행 체계로 "
-            "전환되는 모습을 고밀도 경영진 뉴스레터 장면으로 표현한다."
+            "기술 발표를 단순 기능 출시가 아니라 산업 구조와 조직 운영 변화로 해석하는 "
+            "경영진 브리프 장면으로 표현한다."
         ),
     )
 

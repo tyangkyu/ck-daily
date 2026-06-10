@@ -89,7 +89,7 @@ def validate_source_urls(context: RunContext) -> str:
 
 def validate_email_html(context: RunContext) -> str:
     html = context.output_paths["email_html"].read_text(encoding="utf-8")
-    required = ["ck-daily", "요약", "Top 전략 신호", "핵심 권고"]
+    required = ["ck-daily", "핵심 요약", "주목해야 할 변화", "국내 기업이 고려해야 할 시사점"]
     missing = [item for item in required if item not in html]
     if missing:
         raise ValueError(f"Email HTML missing: {', '.join(missing)}")
@@ -105,7 +105,7 @@ def validate_slack_result(context: RunContext) -> str:
 
 def validate_slack_message_density(context: RunContext) -> str:
     message = context.output_paths["slack_message"].read_text(encoding="utf-8")
-    required = ["Executive Summary", "Impact", "Top 전략 신호", "핵심 권고", "상세"]
+    required = ["핵심 요약", "주목해야 할 변화", "국내 기업 시사점", "실행 검토", "상세"]
     missing = [item for item in required if item not in message]
     if missing:
         raise ValueError(f"Slack message missing: {', '.join(missing)}")
