@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, time, timezone
 from pathlib import Path
 from typing import Callable, List, Optional, Tuple
 
@@ -63,7 +63,11 @@ def collect_step(context: RunContext) -> Tuple[List[Path], str]:
     from datetime import timedelta
 
     sources_config = load_config("sources.yaml")
-    discovered_at = context.created_at
+    discovered_at = (
+        datetime.combine(context.run_date, time.max, tzinfo=timezone.utc)
+        if context.dry_run
+        else context.created_at
+    )
     cutoff_at = discovered_at - timedelta(hours=context.collection_window_hours)
     collected: List[RawItem] = []
     errors: List[str] = []

@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from ax_intel.models import RunContext, SlackSendResult
+from ax_intel.models import RunContext, RunMode, SlackSendResult
 
 
 def _env(key: str) -> Optional[str]:
@@ -21,6 +21,12 @@ def upload_slack(context: RunContext) -> SlackSendResult:
     """
     channel_id = _env("SLACK_CHANNEL_ID") or "C_PLACEHOLDER"
     run_date = context.run_date
+
+    if not context.dry_run and context.mode == RunMode.SEND and not _env("SLACK_BOT_TOKEN"):
+        raise RuntimeError(
+            "SLACK_BOT_TOKEN is required for --mode send. "
+            "Set SLACK_BOT_TOKEN and SLACK_CHANNEL_ID, or publish via the Slack connector."
+        )
 
     if context.dry_run or not _env("SLACK_BOT_TOKEN"):
         return SlackSendResult(
