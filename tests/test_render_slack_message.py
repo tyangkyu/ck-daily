@@ -75,5 +75,5 @@ def test_render_slack_message_creates_post_ready_markdown(tmp_path: Path) -> Non
     assert "*실행 검토*" in message
     assert "*상세*" in message
     assert "OpenAI expands enterprise agent controls" in message
-    assert "report.pdf" in message
+    assert "PDF:" not in message
     assert len(message) < 1800

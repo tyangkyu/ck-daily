@@ -72,6 +72,5 @@ def render_slack_message(
 {immediate_actions}
 
 *상세*
-{canvas_line}- PDF: {manifest.pdf_path.name if manifest.pdf_path else "report.pdf"}
-- 원문: {hero_item.url}
+{canvas_line}- 원문: {hero_item.url}
 """

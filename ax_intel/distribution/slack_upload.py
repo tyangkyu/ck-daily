@@ -6,26 +6,66 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+from ax_intel.config import PROJECT_ROOT
 from ax_intel.models import RunContext, RunMode, SlackSendResult
+
+_ENV_LOADED = False
+
+
+def _load_env_file() -> None:
+    global _ENV_LOADED
+    if _ENV_LOADED:
+        return
+    _ENV_LOADED = True
+    env_path = PROJECT_ROOT / ".env"
+    if not env_path.exists():
+        return
+    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key:
+            os.environ.setdefault(key, value)
 
 
 def _env(key: str) -> Optional[str]:
+    _load_env_file()
     return os.environ.get(key)
 
 
-def upload_slack(context: RunContext) -> SlackSendResult:
-    """Post Slack message and upload files.
+def _file_message_ts(response: object, channel_id: str) -> Optional[str]:
+    if not isinstance(response, dict):
+        return None
+    file_payload = response.get("file")
+    if not isinstance(file_payload, dict):
+        return None
+    shares = file_payload.get("shares")
+    if not isinstance(shares, dict):
+        return None
+    for bucket in ("public", "private"):
+        by_channel = shares.get(bucket)
+        if not isinstance(by_channel, dict):
+            continue
+        entries = by_channel.get(channel_id)
+        if isinstance(entries, list) and entries:
+            ts = entries[0].get("ts")
+            if isinstance(ts, str):
+                return ts
+    return None
 
-    In dry-run mode or when SLACK_BOT_TOKEN is absent, returns a mock result.
-    File uploads are best-effort — a failure does not abort the message post.
-    """
-    channel_id = _env("SLACK_CHANNEL_ID") or "C_PLACEHOLDER"
+
+def upload_slack(context: RunContext) -> SlackSendResult:
+    """Post the daily brief to Slack with report.pdf as the primary attachment."""
+    channel_id = _env("SLACK_CHANNEL_ID") or "C0B7AUS6J0H"
     run_date = context.run_date
 
     if not context.dry_run and context.mode == RunMode.SEND and not _env("SLACK_BOT_TOKEN"):
         raise RuntimeError(
             "SLACK_BOT_TOKEN is required for --mode send. "
-            "Set SLACK_BOT_TOKEN and SLACK_CHANNEL_ID, or publish via the Slack connector."
+            "Set SLACK_BOT_TOKEN and SLACK_CHANNEL_ID in .env or the environment."
         )
 
     if context.dry_run or not _env("SLACK_BOT_TOKEN"):
@@ -40,7 +80,7 @@ def upload_slack(context: RunContext) -> SlackSendResult:
     from slack_sdk import WebClient
 
     client = WebClient(token=_env("SLACK_BOT_TOKEN"))
-    subject = f"[AX Commerce Intelligence] {run_date.strftime('%Y.%m.%d')} Daily Brief"
+    subject = f"ck-daily {run_date.isoformat()} 데일리 브리프"
 
     hero_image_ts: Optional[str] = None
     pdf_ts: Optional[str] = None
@@ -52,15 +92,28 @@ def upload_slack(context: RunContext) -> SlackSendResult:
     except Exception:
         pass  # Private channel — must be manually invited
 
-    # 1. Post the text message first
+    pdf_path: Path = context.output_paths["report_pdf"]
+    if not pdf_path.exists():
+        raise FileNotFoundError(f"Missing report PDF for Slack upload: {pdf_path}")
+
+    # 1. Upload report.pdf with the message as the primary channel post.
     slack_message_path: Path = context.output_paths["slack_message"]
     text = slack_message_path.read_text(encoding="utf-8") if slack_message_path.exists() else subject
-    resp = client.chat_postMessage(channel=channel_id, text=text, mrkdwn=True)
-    message_ts = resp["ts"]
+    resp = client.files_upload_v2(
+        channel=channel_id,
+        file=str(pdf_path),
+        filename=f"ck-daily-{run_date.isoformat()}.pdf",
+        title=f"{subject} PDF",
+        initial_comment=text,
+    )
+    pdf_ts = resp.get("file", {}).get("id")
+    message_ts = _file_message_ts(resp, channel_id)
+    if not pdf_ts:
+        raise RuntimeError("Slack PDF upload did not return a file id")
 
     # 2. Upload hero image as reply (best-effort)
     hero_path: Path = context.output_paths["hero_image"]
-    if hero_path.exists():
+    if hero_path.exists() and message_ts:
         try:
             resp = client.files_upload_v2(
                 channel=channel_id,
@@ -72,21 +125,6 @@ def upload_slack(context: RunContext) -> SlackSendResult:
             hero_image_ts = resp.get("file", {}).get("id")
         except Exception as exc:
             print(f"[WARN] Hero image upload skipped: {exc}", file=sys.stderr)
-
-    # 3. Upload report.pdf as reply (best-effort)
-    pdf_path: Path = context.output_paths["report_pdf"]
-    if pdf_path.exists():
-        try:
-            resp = client.files_upload_v2(
-                channel=channel_id,
-                file=str(pdf_path),
-                filename=pdf_path.name,
-                title=f"Report PDF — {subject}",
-                thread_ts=message_ts,
-            )
-            pdf_ts = resp.get("file", {}).get("id")
-        except Exception as exc:
-            print(f"[WARN] PDF upload skipped: {exc}", file=sys.stderr)
 
     return SlackSendResult(
         run_date=run_date,
