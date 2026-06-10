@@ -74,4 +74,4 @@ python3 scripts/daily_pipeline.py --date 2026-05-31 --dry-run
 ```
 
 `send_gmail.py` is draft-only by default. `--mode send` is currently a guarded stub and requires `--approval-token`.
-`send_slack.py` is dry-run safe by default. Live Slack posting requires `SLACK_BOT_TOKEN` and `SLACK_CHANNEL_ID`.
+`send_slack.py` is dry-run safe by default. Live Slack posting requires `SLACK_BOT_TOKEN` and `SLACK_CHANNEL_ID` in `.env` or the process environment. The live path uploads `report.pdf` as the primary Slack file attachment; connector-only fallback cannot attach local PDF files.
