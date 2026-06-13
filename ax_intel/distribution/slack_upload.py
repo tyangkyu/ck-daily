@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
@@ -57,6 +58,16 @@ def _file_message_ts(response: object, channel_id: str) -> Optional[str]:
     return None
 
 
+def _blocked_result(context: RunContext, channel_id: str, status: str) -> SlackSendResult:
+    return SlackSendResult(
+        run_date=context.run_date,
+        channel_id=channel_id,
+        channel_name=channel_id,
+        status=status,
+        sent_at=datetime.now(timezone.utc),
+    )
+
+
 def upload_slack(context: RunContext) -> SlackSendResult:
     """Post the daily brief to Slack with report.pdf as the primary attachment."""
     channel_id = _env("SLACK_CHANNEL_ID") or "C0B7AUS6J0H"
@@ -73,6 +84,7 @@ def upload_slack(context: RunContext) -> SlackSendResult:
         )
 
     from slack_sdk import WebClient
+    from slack_sdk.errors import SlackApiError
 
     client = WebClient(token=_env("SLACK_BOT_TOKEN"))
     subject = f"ck-daily {run_date.isoformat()} 데일리 브리프"
@@ -84,8 +96,12 @@ def upload_slack(context: RunContext) -> SlackSendResult:
     # 0. Ensure bot is in the channel (works for public channels)
     try:
         client.conversations_join(channel=channel_id)
-    except Exception:
-        pass  # Private channel — must be manually invited
+    except SlackApiError as exc:
+        error = exc.response.get("error")
+        if error not in {"method_not_supported_for_channel_type", "is_archived"}:
+            print(f"[WARN] Slack channel join skipped: {error}", file=sys.stderr)
+    except Exception as exc:
+        print(f"[WARN] Slack channel join skipped: {exc}", file=sys.stderr)
 
     pdf_path: Path = context.output_paths["report_pdf"]
     if not pdf_path.exists():
@@ -94,13 +110,31 @@ def upload_slack(context: RunContext) -> SlackSendResult:
     # 1. Upload report.pdf with the message as the primary channel post.
     slack_message_path: Path = context.output_paths["slack_message"]
     text = slack_message_path.read_text(encoding="utf-8") if slack_message_path.exists() else subject
-    resp = client.files_upload_v2(
-        channel=channel_id,
-        file=str(pdf_path),
-        filename=f"ck-daily-{run_date.isoformat()}.pdf",
-        title=f"{subject} PDF",
-        initial_comment=text,
-    )
+    resp = None
+    for attempt in range(1, 4):
+        try:
+            resp = client.files_upload_v2(
+                channel=channel_id,
+                file=str(pdf_path),
+                filename=f"ck-daily-{run_date.isoformat()}.pdf",
+                title=f"{subject} PDF",
+                initial_comment=text,
+            )
+            break
+        except SlackApiError as exc:
+            error = exc.response.get("error")
+            if error == "not_in_channel":
+                return _blocked_result(context, channel_id, "blocked_bot_not_in_channel")
+            if attempt == 3:
+                return _blocked_result(context, channel_id, f"failed_slack_api_{error or 'unknown'}")
+            time.sleep(2 * attempt)
+        except Exception as exc:
+            if attempt == 3:
+                print(f"[ERROR] Slack PDF upload failed: {exc}", file=sys.stderr)
+                return _blocked_result(context, channel_id, "failed_slack_network")
+            time.sleep(2 * attempt)
+    if resp is None:
+        return _blocked_result(context, channel_id, "failed_slack_upload")
     pdf_ts = resp.get("file", {}).get("id")
     message_ts = _file_message_ts(resp, channel_id)
     if not pdf_ts:
