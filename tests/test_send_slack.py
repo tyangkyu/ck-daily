@@ -77,7 +77,7 @@ def test_send_slack_creates_send_result_in_dry_run(tmp_path: Path) -> None:
     assert send_result.run_date.isoformat() == "2026-05-31"
 
 
-def test_send_slack_fails_without_token_in_send_mode(tmp_path: Path) -> None:
+def test_send_slack_records_blocked_status_without_token_in_send_mode(tmp_path: Path) -> None:
     init_result = subprocess.run(
         [
             sys.executable,
@@ -96,7 +96,8 @@ def test_send_slack_fails_without_token_in_send_mode(tmp_path: Path) -> None:
     )
     run_context_path = Path(init_result.stdout.strip())
     env = os.environ.copy()
-    env.pop("SLACK_BOT_TOKEN", None)
+    env["SLACK_BOT_TOKEN"] = ""
+    env["SLACK_CHANNEL_ID"] = "C_TEST"
 
     result = subprocess.run(
         [
@@ -111,5 +112,9 @@ def test_send_slack_fails_without_token_in_send_mode(tmp_path: Path) -> None:
         text=True,
     )
 
-    assert result.returncode != 0
-    assert "SLACK_BOT_TOKEN is required for --mode send" in result.stderr
+    assert result.returncode == 0
+    output_path = Path(result.stdout.strip())
+    send_result = SlackSendResult.model_validate(read_json(output_path))
+    assert send_result.status == "blocked_missing_slack_token"
+    assert send_result.channel_id == "C_TEST"
+    assert send_result.pdf_ts is None

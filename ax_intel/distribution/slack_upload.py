@@ -62,18 +62,13 @@ def upload_slack(context: RunContext) -> SlackSendResult:
     channel_id = _env("SLACK_CHANNEL_ID") or "C0B7AUS6J0H"
     run_date = context.run_date
 
-    if not context.dry_run and context.mode == RunMode.SEND and not _env("SLACK_BOT_TOKEN"):
-        raise RuntimeError(
-            "SLACK_BOT_TOKEN is required for --mode send. "
-            "Set SLACK_BOT_TOKEN and SLACK_CHANNEL_ID in .env or the environment."
-        )
-
     if context.dry_run or not _env("SLACK_BOT_TOKEN"):
+        status = "dry_run" if context.dry_run else "blocked_missing_slack_token"
         return SlackSendResult(
             run_date=run_date,
             channel_id=channel_id,
-            channel_name="dry-run",
-            status="dry_run",
+            channel_name="dry-run" if context.dry_run else channel_id,
+            status=status,
             sent_at=datetime.now(timezone.utc),
         )
 

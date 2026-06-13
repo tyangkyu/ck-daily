@@ -38,7 +38,7 @@ Slack에 실제 게시:
 python3 scripts/daily_pipeline.py --date 2026-05-31 --mode send
 ```
 
-라이브 Slack 전송은 `SLACK_BOT_TOKEN`과 `SLACK_CHANNEL_ID`가 필요합니다. 전송 성공 기준은 Slack 메시지 게시뿐 아니라 `report.pdf` 파일 첨부 성공까지 포함합니다.
+라이브 Slack 전송은 `SLACK_BOT_TOKEN`과 `SLACK_CHANNEL_ID`가 필요합니다. 토큰이 없으면 보고서 생성과 검증은 완료되지만, Slack 전송 결과는 `blocked_missing_slack_token`으로 기록됩니다. 전송 성공 기준은 Slack 메시지 게시뿐 아니라 `report.pdf` 파일 첨부 성공까지 포함합니다.
 
 ## 단계별 실행
 
@@ -66,3 +66,4 @@ pytest
 - `.env`, `.venv`, `.pytest_cache`, `Reports/<date>/`, 로그, OS 임시 파일은 `.gitignore`로 제외합니다.
 - `Reports/.gitkeep`만 저장소에 유지하고, 일별 보고서 산출물은 커밋하지 않습니다.
 - Slack 커넥터만으로는 로컬 PDF 첨부가 불가능합니다. PDF 첨부가 필요한 운영 게시에는 Slack Bot token 기반 SDK 경로를 사용하세요.
+- `blocked_missing_slack_token` 상태가 반복되면 `.env`에 Slack Bot credential을 추가해야 합니다.
